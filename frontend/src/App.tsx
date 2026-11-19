@@ -30,7 +30,7 @@ import type { Risk } from './weatherRisk'
 import { isTemperature } from './temperatureHeatmap'
 import type { TemperatureHeatmap } from './temperatureHeatmap'
 import { TimeZoneContext } from './TimeZoneContext'
-import { DEVICE_TIME_ZONE, dateTimeInputValue, formatTime, isValidTimeZone, wallTimeInstants } from './timeZone'
+import { DEVICE_TIME_ZONE, dateTimeInputValue, formatTime, isValidTimeZone, tripTimeError, wallTimeInstants } from './timeZone'
 import './App.css'
 import './Planner.css'
 
@@ -1461,7 +1461,7 @@ function App() {
   const [destinationId, setDestinationId] = useState('destination-0')
   const [destinationSelection, setDestinationSelection] = useState<LocationSuggestion | null>(null)
   const [extraDestinations, setExtraDestinations] = useState<TripDestination[]>([])
-  const [scheduleTime, setScheduleTime] = useState(() => dateTimeInputValue(new Date(), timeZone))
+  const [scheduleTime, setScheduleTime] = useState('')
   const [scheduleOccurrence, setScheduleOccurrence] = useState(0)
   const [scheduleMode, setScheduleMode] = useState<ScheduleMode>('now')
   const [loadWeight, setLoadWeight] = useState(() => distanceUnit === 'km' ? String(Math.round(38500 * POUNDS_TO_KILOGRAMS)) : '38500')
@@ -1694,7 +1694,8 @@ function App() {
   const tripWeightValid = weightPounds !== null && Number(loadWeight) >= 0 && Number(loadWeight) <= loadWeightMax
   const scheduleInstants = useMemo(() => wallTimeInstants(scheduleTime, timeZone), [scheduleTime, timeZone])
   const scheduleInstant = scheduleInstants[scheduleOccurrence] ?? scheduleInstants[0]
-  const scheduleValid = scheduleMode === 'now' || Boolean(scheduleInstant)
+  const scheduleError = scheduleMode === 'now' ? '' : tripTimeError(scheduleInstant)
+  const scheduleValid = !scheduleError
   const tripSettingsValid = scheduleValid && tripWeightValid
   const settingsKey = [scheduleMode, scheduleMode === 'now' ? null : scheduleInstant?.toISOString() ?? scheduleTime, weightPounds, intervalMiles]
 
@@ -1988,8 +1989,9 @@ function App() {
   }
 
   async function planRoute(target: { label: string; lat?: number; lon?: number; country?: string } | null = destinationSelection) {
-    if (!tripSettingsValid) {
-      setError('Complete the required time, load weight, and checkpoint settings to plan this trip.')
+    const timeError = scheduleMode === 'now' ? '' : tripTimeError(scheduleInstant)
+    if (timeError || !tripWeightValid) {
+      setError(timeError || 'Complete the required load weight and checkpoint settings to plan this trip.')
       return
     }
     if (!target) {
@@ -2102,7 +2104,10 @@ function App() {
         })
         if (!controller.signal.aborted && !completedKey) throw new Error('The routing service returned an empty plan.')
       } else {
-        const data = await readApiResponse<PlanResult>(response, 'Could not plan this trip. Check the API connection and try again.')
+        const fallback = response.status === 504
+          ? 'Route planning timed out. Try again, or use wider weather checkpoint spacing for a long trip.'
+          : 'Could not plan this trip. Check the API connection and try again.'
+        const data = await readApiResponse<PlanResult>(response, fallback)
         if (!controller.signal.aborted) showPlan(data, true)
       }
     } catch (requestError) {
@@ -2147,7 +2152,7 @@ function App() {
   async function submitTrip(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!tripSettingsValid) {
-      setError('Complete the required time, load weight, and checkpoint settings to plan this trip.')
+      setError(scheduleError || 'Complete the required load weight and checkpoint settings to plan this trip.')
       return
     }
     if (!allDestinationsSet) {
@@ -2389,7 +2394,8 @@ function App() {
               <div className="segmented-control" role="group" aria-label="Trip timing">
                 {([['now', 'Leave now'], ['departure', 'Depart at'], ['arrival', 'Arrive by']] as const).map(([mode, label]) => (
                   <ButtonBase key={mode} type="button" className={scheduleMode === mode ? 'active' : ''} aria-pressed={scheduleMode === mode} onClick={() => {
-                    if (scheduleMode === 'now') { setScheduleTime(dateTimeInputValue(new Date(), timeZone)); setScheduleOccurrence(0) }
+                    if (mode === scheduleMode) return
+                    if (mode !== 'now') { setScheduleTime(''); setScheduleOccurrence(0) }
                     setError('')
                     setScheduleMode(mode)
                   }}>{label}</ButtonBase>
@@ -2402,7 +2408,7 @@ function App() {
                 <span>{scheduleMode === 'departure' ? 'Departure time' : 'Arrival time'}</span>
                 </label>
                 <InputBase id="trip-time" type="datetime-local" value={scheduleTime} inputProps={{ 'aria-invalid': !scheduleValid, 'aria-describedby': scheduleValid ? undefined : 'trip-time-error' }} onChange={(event) => { numericInputUntil.current = performance.now() + 140; setScheduleTime(event.target.value); setScheduleOccurrence(0); setError('') }} required />
-                {!scheduleValid && <small className="field-error" id="trip-time-error">Enter a valid local date and time.</small>}
+                {!scheduleValid && <small className="field-error" id="trip-time-error">{scheduleError}</small>}
                 {scheduleInstants.length > 1 && <div className="schedule-occurrence">
                   <small>This time occurs twice because the clocks change.</small>
                   <div className="segmented-control" role="group" aria-label="Time occurrence">

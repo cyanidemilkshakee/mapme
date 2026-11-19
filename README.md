@@ -149,6 +149,24 @@ React planner and Google Maps interface
 
 The browser requests `POST /api/route-plans?delivery=progressive`. NDJSON delivers ranked routes and the selected map first, followed by directions, alternate geometry, and forecast playback. The default endpoint also supports a full JSON response. Preserve `X-Accel-Buffering: no` through reverse proxies so the first event can reach the browser promptly.
 
+## Vercel services
+
+The root `vercel.json` defines two services in one Vercel project: `backend` (Django, rooted at `backend/`) and `frontend` (Vite, rooted at `frontend/`). The public `/api/*` path is routed to Django; all other paths are routed to the frontend, whose rewrite serves the Vite SPA for routes such as `/settings`. The API remains same-origin, so the browser does not call the backend service URL directly. No Vercel service bindings are needed: the frontend calls `/api/*` through the public rewrite, and Django calls external Google APIs and Redis rather than another Vercel service.
+
+In Vercel, set the project Framework Preset to **Services** and keep the project root at the repository root. Services are currently in beta. Add these environment variables for Production and Preview as needed:
+
+- `DJANGO_SECRET_KEY`: a random secret of at least 50 characters.
+- `GOOGLE_MAPS_API_KEY`: server-side Routes, Places, Geocoding, and Weather key.
+- `GOOGLE_MAPS_BROWSER_KEY`: browser key restricted to Maps JavaScript and your Vercel/custom-domain referrers.
+- `DJANGO_ALLOWED_HOSTS`: comma-separated custom hostnames if you use a custom domain. Vercel deployment hostnames are read from Vercel's system variables.
+- `REDIS_URL`: optional external Redis URL for shared provider caching and rate limits across serverless instances. Without it, Vercel uses a per-process memory cache; that cache is not shared between instances.
+
+With the Vercel CLI installed, run `vercel dev --local` from the repository root to test the services together without cloud authentication. Check `/api/health`, an API request, and a frontend route such as `/settings` through the Vercel dev URL. Use `vercel dev` instead when working with a linked project and its environment.
+
+Vercel is treated as the HTTPS edge, so the Kong-only `SPOTTER_GATEWAY_TOKEN` is not required there. Django still restricts browser API use to the same origin. SQLite remains the configured database and uses `/tmp/mapme.sqlite3` on Vercel because the function filesystem is ephemeral. This app currently stores no trip data in Django's database; SQLite there is only used for Django's database connectivity check. Do not rely on that SQLite file for persistent data.
+
+No deployment is triggered by this repository configuration. Before importing the repository, confirm that Vercel Services is enabled for the account and configure the environment variables above.
+
 ## Kubernetes
 
 ```bash

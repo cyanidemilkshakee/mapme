@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { dateTimeInputValue, formatTime, isValidTimeZone, timeZoneLabel, wallTimeInstants } from '../src/timeZone.ts'
+import { dateTimeInputValue, formatTime, isValidTimeZone, timeZoneLabel, tripTimeError, wallTimeInstants } from '../src/timeZone.ts'
 
 test('converts scheduled wall times in the selected zone, including fractional-hour offsets', () => {
   assert.equal(wallTimeInstants('2026-06-01T09:15', 'Asia/Kathmandu')[0].toISOString(), '2026-06-01T03:30:00.000Z')
@@ -24,4 +24,12 @@ test('omits offsets from trip times and includes them in time-zone choices', () 
   assert.match(formatTime('2026-01-01T12:00:00Z', 'UTC'), /12/)
   assert.equal(timeZoneLabel('Asia/Calcutta'), 'Asia / Kolkata GMT+05:30')
   assert.equal(timeZoneLabel('UTC'), 'UTC GMT+00:00')
+})
+
+test('accepts only scheduled times between now and the UTC forecast cutoff', () => {
+  const now = new Date('2026-11-19T20:30:00Z')
+  assert.match(tripTimeError(undefined, now), /valid local date/)
+  assert.match(tripTimeError(new Date('2026-11-19T20:29:00Z'), now), /in the future/)
+  assert.equal(tripTimeError(new Date('2026-11-25T23:59:00Z'), now), '')
+  assert.match(tripTimeError(new Date('2026-11-26T00:00:00Z'), now), /seven-day forecast/)
 })

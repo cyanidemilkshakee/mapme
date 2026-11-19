@@ -1,7 +1,8 @@
 """Route planning and location APIs backed by Google Maps Platform."""
 
 from bisect import bisect_left, bisect_right
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, as_completed, wait
+from contextlib import contextmanager
 from contextvars import ContextVar, copy_context
 from datetime import datetime, timedelta, timezone
 from functools import lru_cache, wraps
@@ -50,6 +51,10 @@ SUGGESTION_DISTANCE_BANDS_MILES = (10, 50, 250)
 RISK_NAMES = ("Low", "Moderate", "High", "Severe", "No Travel", "Unavailable")
 RISK_INDEX = {risk: index for index, risk in enumerate(RISK_NAMES)}
 _PROVIDER_BUDGET = ContextVar("provider_budget", default=None)
+_PROVIDER_DEADLINE = ContextVar("provider_deadline", default=None)
+PLAN_RESPONSE_SECONDS = 25
+PLAN_WEATHER_SECONDS = 12
+PLAYBACK_WEATHER_SECONDS = 16
 _HTTP = httpx.Client(
     limits=httpx.Limits(max_connections=32, max_keepalive_connections=16, keepalive_expiry=30),
     headers={"User-Agent": "WeatherAwareTruckRouting/1.0"},
@@ -91,6 +96,10 @@ class PlanningError(Exception):
     pass
 
 
+class PlanningTimeout(PlanningError):
+    pass
+
+
 class TripValidationError(PlanningError):
     pass
 
@@ -108,7 +117,7 @@ class ProviderBudget:
     def remaining(self):
         remaining = self.deadline - monotonic()
         if remaining <= 0:
-            raise PlanningError("The planning services did not finish in time. Try again shortly.")
+            raise PlanningTimeout("The planning services did not finish in time. Try again shortly.")
         return remaining
 
     def start_call(self):
@@ -138,6 +147,34 @@ class ProviderExecutor(ThreadPoolExecutor):
         return super().submit(copy_context().run, fn, *args, **kwargs)
 
 
+@contextmanager
+def _provider_time_limit(seconds):
+    deadline = monotonic() + seconds
+    parent = _PROVIDER_DEADLINE.get()
+    token = _PROVIDER_DEADLINE.set(min(deadline, parent) if parent is not None else deadline)
+    try:
+        yield
+    finally:
+        _PROVIDER_DEADLINE.reset(token)
+
+
+@contextmanager
+def _plan_executor(max_workers):
+    executor = ProviderExecutor(max_workers=max_workers)
+    try:
+        yield executor
+    finally:
+        # Worker I/O has its own timeout. The request must not join stragglers.
+        executor.shutdown(wait=False, cancel_futures=True)
+
+
+def _plan_results(futures):
+    try:
+        return {futures[future]: future.result() for future in as_completed(futures, timeout=_remaining())}
+    except TimeoutError as exc:
+        raise PlanningTimeout("The route provider did not respond in time. Try planning again.") from exc
+
+
 @api_view(["GET"])
 @throttle_classes([])
 def health_check(request):
@@ -158,7 +195,13 @@ def readiness_check(request):
 
 def _remaining():
     budget = _PROVIDER_BUDGET.get()
-    return budget.remaining() if budget else 16
+    remaining = budget.remaining() if budget else 16
+    deadline = _PROVIDER_DEADLINE.get()
+    if deadline is not None:
+        remaining = min(remaining, deadline - monotonic())
+        if remaining <= 0:
+            raise PlanningTimeout("The planning services did not finish in time. Try again shortly.")
+    return remaining
 
 
 def _get_json(url, *, timeout=8, fields="", params=None, body=None, retry=True):
@@ -183,8 +226,7 @@ def _get_json(url, *, timeout=8, fields="", params=None, body=None, retry=True):
                 if status < 400:
                     content = bytearray()
                     for chunk in response.iter_bytes():
-                        if budget:
-                            budget.remaining()
+                        _remaining()
                         if len(content) + len(chunk) > MAX_PROVIDER_RESPONSE_BYTES:
                             raise PlanningError(f"{host} returned too much data.")
                         content.extend(chunk)
@@ -383,17 +425,41 @@ _WEATHER_EXECUTOR = ProviderExecutor(max_workers=WEATHER_JOBS)
 
 
 def _point_weather(points, load):
-    futures = {
-        _WEATHER_EXECUTOR.submit(load, point["latitude"], point["longitude"]): index
-        for index, point in enumerate(points)
-    }
+    # Keep at most one batch per request queued on the shared executor.
+    pending = iter(enumerate(points))
+    futures = {}
     results = [{} for _ in points]
     failures = []
-    for future in as_completed(futures):
-        try:
-            results[futures[future]] = future.result()
-        except (PlanningError, TimeoutError) as exc:
-            failures.append(exc)
+
+    def fetch(point):
+        _remaining()
+        return load(point["latitude"], point["longitude"])
+
+    def submit_next():
+        item = next(pending, None)
+        if item is not None:
+            index, point = item
+            futures[_WEATHER_EXECUTOR.submit(fetch, point)] = index
+
+    try:
+        for _ in range(min(WEATHER_JOBS, len(points))):
+            submit_next()
+        while futures:
+            ready, _ = wait(futures, timeout=_remaining(), return_when=FIRST_COMPLETED)
+            if not ready:
+                raise PlanningTimeout("Weather forecasts did not finish in time.")
+            for future in ready:
+                index = futures.pop(future)
+                try:
+                    results[index] = future.result()
+                except (PlanningError, TimeoutError) as exc:
+                    failures.append(exc)
+                submit_next()
+    except PlanningTimeout as exc:
+        failures.append(exc)
+    finally:
+        for future in futures:
+            future.cancel()
     if failures and not any(results):
         raise PlanningError(str(failures[0])) from failures[0]
     return results
@@ -606,9 +672,10 @@ def _get_leg_options(waypoints):
         return options
 
     segments = list(zip(waypoints, waypoints[1:]))
-    with ProviderExecutor(max_workers=min(3, len(segments))) as executor:
-        futures = [executor.submit(fetch_segment, start, end) for start, end in segments]
-        return [future.result() for future in futures]
+    with _plan_executor(max_workers=min(3, len(segments))) as executor:
+        futures = {executor.submit(fetch_segment, start, end): index for index, (start, end) in enumerate(segments)}
+        options = _plan_results(futures)
+        return [options[index] for index in range(len(segments))]
 
 
 def _geometry_lengths(coordinates):
@@ -1239,42 +1306,37 @@ def _select_weather_points(leg_options):
 
 def _route_weather(leg_options, load_weight, window=None):
     locations, sample_limited = _select_weather_points(leg_options)
-    chunks = [locations[start:start + 45] for start in range(0, len(locations), 45)]
     weather_by_location = {}
     timeline_indices = {}
-    failures = []
-    with ProviderExecutor(max_workers=min(3, len(chunks)) or 1) as executor:
-        futures = {
-            executor.submit(
-                _fetch_forecast_chunk, [{"latitude": lat, "longitude": lon} for lat, lon in chunk],
+    failure = None
+    responses = []
+    if locations:
+        try:
+            responses = _fetch_forecast_chunk(
+                [{"latitude": lat, "longitude": lon} for lat, lon in locations],
                 **({"window": window} if window else {}),
-            ): chunk for chunk in chunks
-        }
-        for future in as_completed(futures):
-            chunk = futures[future]
-            try:
-                responses = future.result()
-            except PlanningError as exc:
-                failures.append(str(exc))
-                continue
-            if not isinstance(responses, list) or len(responses) != len(chunk):
-                failures.append("The weather service returned an incomplete checkpoint forecast.")
-                continue
-            for key, response in zip(chunk, responses):
-                hourly = response.get("hourly") if isinstance(response, dict) else None
-                if not isinstance(hourly, dict) or not isinstance(hourly.get("time"), list):
-                    continue
-                times = tuple(hourly["time"])
-                try:
-                    axis = timeline_indices.get(times)
-                except TypeError:
-                    times = tuple(value if isinstance(value, (int, str)) else None for value in times)
-                    axis = timeline_indices.get(times)
-                if axis is None:
-                    axis = _forecast_axis(times)
-                    timeline_indices[times] = axis
-                columns = tuple(hourly.get(field) for field in FORECAST_FIELDS)
-                weather_by_location[key] = axis, columns
+            )
+        except PlanningError as exc:
+            failure = str(exc)
+        if not failure and (not isinstance(responses, list) or len(responses) != len(locations)):
+            failure = "The weather service returned an incomplete checkpoint forecast."
+            responses = []
+    for key, response in zip(locations, responses):
+        hourly = response.get("hourly") if isinstance(response, dict) else None
+        if not isinstance(hourly, dict) or not isinstance(hourly.get("time"), list) or not hourly["time"]:
+            failure = failure or "Weather forecasts could not be loaded for some checkpoints."
+            continue
+        times = tuple(hourly["time"])
+        try:
+            axis = timeline_indices.get(times)
+        except TypeError:
+            times = tuple(value if isinstance(value, (int, str)) else None for value in times)
+            axis = timeline_indices.get(times)
+        if axis is None:
+            axis = _forecast_axis(times)
+            timeline_indices[times] = axis
+        columns = tuple(hourly.get(field) for field in FORECAST_FIELDS)
+        weather_by_location[key] = axis, columns
 
     @lru_cache(maxsize=32768)
     def weather_at(key, hour):
@@ -1319,10 +1381,10 @@ def _route_weather(leg_options, load_weight, window=None):
             "Weather sampling reached the service limit. Unsampled checkpoints are marked unavailable, "
             "and routes with incomplete weather are not recommended."
         )
-    if failures:
+    if failure:
         warnings.append(
             "Google Weather is rate limiting forecast requests. Affected checkpoints are marked unavailable."
-            if any("HTTP 429" in failure for failure in failures)
+            if "HTTP 429" in failure
             else "Weather forecasts could not be loaded for some checkpoints. Affected checkpoints are marked unavailable."
         )
     warning = " ".join(warnings) or None
@@ -1524,6 +1586,7 @@ def _first_validation_error(errors):
 @api_view(["POST"])
 @throttle_classes([PlanThrottle])
 @provider_budget(seconds=40, calls=MAX_FORECAST_POINTS * FORECAST_DAYS + 24)
+@_provider_time_limit(PLAN_RESPONSE_SECONDS)
 def plan_routes(request):
     try:
         try:
@@ -1595,16 +1658,16 @@ def plan_routes(request):
                 raise TripValidationError("Choose a location for every destination and stop.")
 
         if missing:
-            with ProviderExecutor(max_workers=min(4, len(missing))) as executor:
-                lookups = {index: executor.submit(_geocode, query) for index, query in missing.items()}
-                for index, future in lookups.items():
-                    waypoints[index] = future.result()
+            with _plan_executor(max_workers=min(4, len(missing))) as executor:
+                lookups = {executor.submit(_geocode, query): index for index, query in missing.items()}
+                for index, waypoint in _plan_results(lookups).items():
+                    waypoints[index] = waypoint
 
         if any(_same_waypoint(first, second) for first_index, first in enumerate(waypoints) for second in waypoints[first_index + 1:]):
             raise TripValidationError("A trip cannot use the same location for multiple waypoints. Choose a different place for each point.")
         complete_stage("geocode")
 
-        with ProviderExecutor(max_workers=4) as executor:
+        with _plan_executor(max_workers=4) as executor:
             countries = {
                 index: executor.submit(_country_for_waypoint, waypoint)
                 for index, waypoint in enumerate(waypoints) if not waypoint.get("country")
@@ -1615,14 +1678,16 @@ def plan_routes(request):
             candidates, skipped_time, skipped_size = _rank_trips(prepared, requested_time, time_mode)
             used_legs = {id(leg): leg for legs, _, _ in candidates for leg in legs}
             complete_stage("prepare")
-            forecasts, weather_warning = _route_weather(
-                [used_legs.values()], load_weight, _forecast_window(candidates, now, playback=not compact),
-            )
+            with _provider_time_limit(PLAN_WEATHER_SECONDS):
+                forecasts, weather_warning = _route_weather(
+                    [used_legs.values()], load_weight, _forecast_window(candidates, now, playback=not compact),
+                )
             complete_stage("weather")
             chosen = _rank_candidates(candidates, forecasts)
             complete_stage("rank")
             for index, future in countries.items():
-                waypoints[index]["country"] = future.result()
+                if future.done():
+                    waypoints[index]["country"] = future.result()
         complete_stage("metadata")
         routes = [
             _make_route(legs, index, departure, waypoints, forecasts, compact=compact)
@@ -1667,7 +1732,8 @@ def plan_routes(request):
                 token = _PROVIDER_BUDGET.set(budget)
                 try:
                     legs_to_display = {id(leg): leg for legs, _, _ in chosen for leg in legs}
-                    return _route_weather([legs_to_display.values()], load_weight, _forecast_window(chosen, now))[0]
+                    with _provider_time_limit(PLAYBACK_WEATHER_SECONDS):
+                        return _route_weather([legs_to_display.values()], load_weight, _forecast_window(chosen, now))[0]
                 finally:
                     _PROVIDER_BUDGET.reset(token)
 
@@ -1681,6 +1747,8 @@ def plan_routes(request):
         return Response({"error": str(exc)}, status=400)
     except TripInfeasibleError as exc:
         return Response({"error": str(exc)}, status=422)
+    except PlanningTimeout as exc:
+        return Response({"error": str(exc)}, status=503)
     except PlanningError as exc:
         return Response({"error": str(exc)}, status=502)
     except Exception:

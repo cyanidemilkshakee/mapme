@@ -17,6 +17,11 @@ class GatewayAccessMiddleware:
 
     def __call__(self, request):
         path = request.path_info
+        if settings.IS_VERCEL:
+            try:
+                request.META["SPOTTER_CLIENT_IP"] = str(ip_address(request.META.get("HTTP_X_REAL_IP", "")))
+            except ValueError:
+                request.META.pop("SPOTTER_CLIENT_IP", None)
         if path != "/api" and not path.startswith("/api/"):
             return self.get_response(request)
 

@@ -7,15 +7,26 @@ from django.core.management.utils import get_random_secret_key
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-PRODUCTION = os.environ.get("DJANGO_ENVIRONMENT", "local").lower() == "production"
+IS_VERCEL = os.environ.get("VERCEL", "").lower() == "1"
+VERCEL_ENVIRONMENT = os.environ.get("VERCEL_ENV", "").lower()
+PRODUCTION = (
+    os.environ.get("DJANGO_ENVIRONMENT", "local").lower() == "production"
+    or (IS_VERCEL and VERCEL_ENVIRONMENT in {"production", "preview"})
+)
 DEBUG = not PRODUCTION and os.environ.get("DJANGO_DEBUG", "true").lower() == "true"
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY") or ""
+VERCEL_HOSTS = (
+    os.environ.get(name, "").strip()
+    for name in ("VERCEL_URL", "VERCEL_BRANCH_URL", "VERCEL_PROJECT_PRODUCTION_URL")
+)
 ALLOWED_HOSTS = list(dict.fromkeys([
     "localhost", "127.0.0.1", "[::1]",
+    *(host for host in VERCEL_HOSTS if host),
     *(host.strip() for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(",") if host.strip()),
 ]))
-SPOTTER_GATEWAY_TOKEN = os.environ.get("SPOTTER_GATEWAY_TOKEN", "")
-if (PRODUCTION or SPOTTER_GATEWAY_TOKEN) and not re.fullmatch(r"[A-Za-z0-9_-]{32,128}", SPOTTER_GATEWAY_TOKEN):
+# Vercel routes API requests through its public ingress, not the Kong gateway.
+SPOTTER_GATEWAY_TOKEN = "" if IS_VERCEL else os.environ.get("SPOTTER_GATEWAY_TOKEN", "")
+if ((PRODUCTION and not IS_VERCEL) or SPOTTER_GATEWAY_TOKEN) and not re.fullmatch(r"[A-Za-z0-9_-]{32,128}", SPOTTER_GATEWAY_TOKEN):
     raise ImproperlyConfigured("Set SPOTTER_GATEWAY_TOKEN to a random URL-safe secret of 32–128 characters.")
 
 if PRODUCTION:
@@ -37,7 +48,7 @@ CSRF_COOKIE_SECURE = PRODUCTION
 SECURE_HSTS_SECONDS = int(os.environ.get("DJANGO_HSTS_SECONDS", "31536000")) if PRODUCTION else 0
 SECURE_HSTS_INCLUDE_SUBDOMAINS = PRODUCTION and os.environ.get("DJANGO_HSTS_SUBDOMAINS", "").lower() == "true"
 SECURE_HSTS_PRELOAD = PRODUCTION and os.environ.get("DJANGO_HSTS_PRELOAD", "").lower() == "true"
-if SPOTTER_GATEWAY_TOKEN or os.environ.get("DJANGO_TRUST_PROXY_HTTPS", "").lower() == "true":
+if IS_VERCEL or SPOTTER_GATEWAY_TOKEN or os.environ.get("DJANGO_TRUST_PROXY_HTTPS", "").lower() == "true":
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 INSTALLED_APPS = [
@@ -64,15 +75,23 @@ REST_FRAMEWORK = {
     "UNAUTHENTICATED_USER": None,
 }
 
-CACHES = {
-    "default": {
+REDIS_URL = os.environ.get("REDIS_URL", "").strip()
+DEFAULT_CACHE = (
+    {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": os.environ.get("REDIS_URL", "redis://127.0.0.1:6379/1"),
-        "OPTIONS": {
-            "socket_connect_timeout": 0.5,
-            "socket_timeout": 0.5,
-        },
-    },
+        "LOCATION": REDIS_URL or "redis://127.0.0.1:6379/1",
+        "OPTIONS": {"socket_connect_timeout": 0.5, "socket_timeout": 0.5},
+    }
+    if REDIS_URL or not IS_VERCEL
+    else {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "vercel-process-cache",
+        "OPTIONS": {"MAX_ENTRIES": 5000},
+    }
+)
+
+CACHES = {
+    "default": DEFAULT_CACHE,
     "throttle_fallback": {
         "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
         "LOCATION": "api-throttle-fallback",
@@ -116,7 +135,10 @@ ASGI_APPLICATION = "config.asgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": os.environ.get("DJANGO_DATABASE_PATH", str(BASE_DIR / "db.sqlite3")),
+        "NAME": os.environ.get(
+            "DJANGO_DATABASE_PATH",
+            "/tmp/mapme.sqlite3" if IS_VERCEL else str(BASE_DIR / "db.sqlite3"),
+        ),
     }
 }
 

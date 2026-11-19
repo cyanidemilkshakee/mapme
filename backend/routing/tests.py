@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta, timezone
 import os
+from threading import Event
+from time import monotonic
 from unittest.mock import patch
 
 from django.test import SimpleTestCase, override_settings
@@ -210,6 +212,54 @@ class RoutingApiTests(SimpleTestCase):
         self.assertEqual([(point["distance_miles"], point["longitude"]) for point in checkpoints], [(0.0, 0), (0.15, 0.002)])
         self.assertIsNone(result["recommended_route_id"])
         self.assertEqual(result["routes"][0]["metrics_by_hour"][0]["unknown_checkpoints"], 2)
+
+    def test_slow_weather_returns_route_with_only_completed_forecasts(self):
+        release = Event()
+        leg = road_leg([0, 0], [0.002, 0], 0, 1, miles=0.15)
+
+        def fetch(points, window=None):
+            def load(lat, lon):
+                if lon == 0.002:
+                    release.wait(3)
+                return weather_response([{"latitude": lat}])[0]
+
+            return views._point_weather(points, load)
+
+        try:
+            with (
+                patch.object(views, "PLAN_WEATHER_SECONDS", 0.2),
+                patch.object(views, "_get_leg_options", return_value=[[leg]]),
+                patch.object(views, "_fetch_forecast_chunk", side_effect=fetch),
+            ):
+                start = monotonic()
+                response = self.plan(stops=[{"lat": 0, "lon": 0.002, "country": "Test country"}])
+                self.assertLess(monotonic() - start, 2)
+        finally:
+            release.set()
+
+        self.assertEqual(response.status_code, 200, response.data)
+        result = response.json()
+        self.assertIn("marked unavailable", result["weather_warning"])
+        self.assertIsNone(result["recommended_route_id"])
+        self.assertEqual(result["routes"][0]["metrics_by_hour"][0]["unknown_checkpoints"], 1)
+
+    def test_slow_road_provider_returns_controlled_unavailable_response(self):
+        release = Event()
+
+        def fetch(*args, **kwargs):
+            release.wait(3)
+            return {}
+
+        try:
+            with views._provider_time_limit(0.2), patch.object(views, "_get_json", side_effect=fetch):
+                start = monotonic()
+                response = self.plan()
+                self.assertLess(monotonic() - start, 2)
+        finally:
+            release.set()
+
+        self.assertEqual(response.status_code, 503, response.data)
+        self.assertIn("did not respond in time", response.data["error"])
 
     def test_invalid_and_infeasible_trips_are_rejected_before_upstream_calls(self):
         before = datetime.now(timezone.utc) - timedelta(hours=1)

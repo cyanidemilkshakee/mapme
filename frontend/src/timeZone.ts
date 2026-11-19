@@ -58,6 +58,16 @@ export function dateTimeInputValue(date: Date, timeZone: string) {
   return `${p.year.padStart(4, '0')}-${p.month}-${p.day}T${p.hour}:${p.minute}`
 }
 
+export function tripTimeError(instant: Date | undefined, now = new Date()) {
+  if (!instant || !Number.isFinite(instant.getTime())) return 'Enter a valid local date and time.'
+  if (instant <= now) return 'Choose a trip time in the future.'
+  const forecastEnd = new Date(now)
+  forecastEnd.setUTCHours(0, 0, 0, 0)
+  forecastEnd.setUTCDate(forecastEnd.getUTCDate() + 7)
+  if (instant >= forecastEnd) return 'Choose a trip time within the available seven-day forecast.'
+  return ''
+}
+
 export function formatTime(value: string | number | Date, timeZone: string) {
   const zone = resolveTimeZone(timeZone)
   let formatter = displayFormatters.get(zone)
