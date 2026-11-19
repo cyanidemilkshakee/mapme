@@ -1,0 +1,160 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kong
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kong
+  template:
+    metadata:
+      labels:
+        app: kong
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1337
+        runAsGroup: 1337
+        fsGroup: 1337
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: gateway-config
+          image: spotter-gateway-config:local
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          env:
+            - name: DJANGO_ENVIRONMENT
+              valueFrom:
+                configMapKeyRef:
+                  name: truck-routing-config
+                  key: DJANGO_ENVIRONMENT
+            - name: KONG_TRUSTED_IPS
+              valueFrom:
+                configMapKeyRef:
+                  name: truck-routing-config
+                  key: KONG_TRUSTED_IPS
+            - name: SPOTTER_GATEWAY_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: truck-routing-secret
+                  key: SPOTTER_GATEWAY_TOKEN
+                  optional: true
+          envFrom:
+            - secretRef:
+                name: spotter-gateway-secret
+                optional: true
+          volumeMounts:
+            - name: gateway-config
+              mountPath: /gateway-config
+      containers:
+        - name: kong
+          image: kong:3.9.4
+          ports:
+            - name: proxy
+              containerPort: 8000
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          env:
+            - name: KONG_DATABASE
+              value: "off"
+            - name: KONG_DECLARATIVE_CONFIG
+              value: /gateway-config/kong.json
+            - name: KONG_PREFIX
+              value: /tmp/kong
+            - name: KONG_PROXY_LISTEN
+              value: "0.0.0.0:8000"
+            - name: KONG_ADMIN_LISTEN
+              value: "off"
+            - name: KONG_ADMIN_GUI_LISTEN
+              value: "off"
+            - name: KONG_STATUS_LISTEN
+              value: "127.0.0.1:8100"
+            - name: KONG_HEADERS
+              value: "off"
+            - name: KONG_PROXY_ACCESS_LOG
+              value: "off"
+            - name: KONG_TRUSTED_IPS
+              valueFrom:
+                configMapKeyRef:
+                  name: truck-routing-config
+                  key: KONG_TRUSTED_IPS
+            - name: KONG_REAL_IP_HEADER
+              value: X-Forwarded-For
+            - name: KONG_REAL_IP_RECURSIVE
+              value: "on"
+            - name: KONG_NGINX_PROXY_CLIENT_MAX_BODY_SIZE
+              value: "64k"
+            - name: KONG_NGINX_HTTP_LIMIT_REQ_ZONE
+              value: "$binary_remote_addr zone=spotter_edge:10m rate=20r/s"
+            - name: KONG_NGINX_PROXY_LIMIT_REQ
+              value: "zone=spotter_edge burst=40 nodelay"
+            - name: KONG_NGINX_PROXY_LIMIT_REQ_STATUS
+              value: "429"
+            - name: KONG_NGINX_WORKER_PROCESSES
+              value: "2"
+            - name: KONG_NGINX_HTTP_GZIP
+              value: "on"
+            - name: KONG_NGINX_HTTP_GZIP_TYPES
+              value: application/json application/x-ndjson
+            - name: KONG_NGINX_HTTP_GZIP_PROXIED
+              value: any
+          volumeMounts:
+            - name: gateway-config
+              mountPath: /gateway-config
+              readOnly: true
+            - name: kong-runtime
+              mountPath: /tmp
+          startupProbe:
+            exec:
+              command: ["kong", "health", "-p", "/tmp/kong"]
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 15
+          readinessProbe:
+            exec:
+              command: ["kong", "health", "-p", "/tmp/kong"]
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["kong", "health", "-p", "/tmp/kong"]
+            periodSeconds: 20
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+      volumes:
+        - name: gateway-config
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Mi
+        - name: kong-runtime
+          emptyDir:
+            medium: Memory
+            sizeLimit: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kong
+spec:
+  type: ClusterIP
+  selector:
+    app: kong
+  ports:
+    - name: proxy
+      port: 8000
+      targetPort: proxy

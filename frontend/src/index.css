@@ -1,0 +1,52 @@
+:root {
+  font-family: 'Poppins', 'Avenir Next', sans-serif;
+  color: #202124;
+  background: #f1f3f4;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  --ink: #292f2a;
+  --muted: #5e665e;
+  --line: #d6d3c8;
+  --canvas: #f2f0e8;
+  --green: #315e47;
+  --rust: #315e47;
+  --display: 'Montserrat', 'Avenir Next', sans-serif;
+  --sans: 'Poppins', 'Avenir Next', sans-serif;
+  --mono: "SFMono-Regular", Consolas, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-width: 320px;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+::selection {
+  color: #fff;
+  background: #1a73e8;
+}

@@ -1,0 +1,4 @@
+{$SPOTTER_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy kong:8000
+}

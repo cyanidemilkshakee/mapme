@@ -1,0 +1,1616 @@
+.app-shell {
+  --surface: #fffdf8;
+  --surface-subtle: #f2f0e8;
+  --surface-raised: #e8ede5;
+  --text: #292f2a;
+  --secondary-text: #5e665e;
+  --border: #d6d3c8;
+  --control-border: #7d8579;
+  --focus: #356849;
+  --accent: #315e47;
+  --positive: #286344;
+  --positive-surface: #e6f0e7;
+  --critical: #852f34;
+  --critical-surface: #f5e7e3;
+  --risk-low: #397b5e;
+  --risk-moderate: #94621c;
+  --risk-high: #a4572e;
+  --risk-severe: #a33f36;
+  --risk-stop: #8f3659;
+  --risk-missing: #596775;
+  --panel-pad: clamp(12px, 2vw, 22px);
+  color: var(--text);
+}
+
+.app-shell[data-theme='dark'] {
+  color-scheme: dark;
+  --surface: #252a27;
+  --surface-subtle: #303632;
+  --surface-raised: #38443a;
+  --text: #eeeae0;
+  --secondary-text: #c2c5bc;
+  --border: #4b534b;
+  --control-border: #899187;
+  --focus: #b7ce9e;
+  --accent: #c0d3a9;
+  --positive: #a7c9a9;
+  --positive-surface: #2b3c30;
+  --critical: #e5b1a5;
+  --critical-surface: #49312f;
+  --risk-low: #96b89c;
+  --risk-moderate: #dfbd77;
+  --risk-high: #e2a17b;
+  --risk-severe: #df877a;
+  --risk-stop: #d99ab0;
+  --risk-missing: #c2c7bd;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.app-shell :is(:focus-visible, .Mui-focusVisible) {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.app-shell .skip-link {
+  position: absolute;
+  z-index: 1000;
+  top: 8px;
+  left: 8px;
+  padding: 10px 14px;
+  color: var(--accent);
+  background: var(--surface);
+  transform: translateY(-200%);
+}
+
+.app-shell .skip-link:focus {
+  transform: none;
+}
+
+.planning-shell.planner-active {
+  display: grid;
+  grid-template-columns: clamp(360px, 39vw, 560px) minmax(0, 1fr);
+}
+
+.planning-shell .planner-card {
+  width: min(440px, calc(100% - 32px));
+  max-height: calc(100% - 32px);
+  height: auto;
+  top: 16px;
+  left: 16px;
+  padding: 0;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 3px 16px #17263520;
+  scroll-padding-top: 66px;
+  animation: none;
+}
+
+.planning-shell:not(.planner-active) .planner-card {
+  overflow: visible;
+}
+
+.planning-shell:not(.planner-active) :is(.planner-content, .trip-form) {
+  border-radius: inherit;
+}
+
+.planning-shell.planner-active .planner-card {
+  position: relative;
+  inset: auto;
+  width: auto;
+  height: auto;
+  max-height: none;
+  min-height: 0;
+  border-width: 0 1px 0 0;
+  border-radius: 0;
+  box-shadow: none;
+  overscroll-behavior: contain;
+}
+
+.planning-shell .map-pane {
+  inset: 0;
+  width: auto;
+  container-type: inline-size;
+}
+
+.planning-shell.planner-active .map-pane {
+  position: relative;
+}
+
+.planner-header {
+  position: sticky;
+  top: 0;
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 7px var(--panel-pad);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.planner-header > div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+@media (min-width: 681px) {
+  .planner-header-empty {
+    display: none;
+  }
+}
+
+.planning-shell .planner-action {
+  min-height: 44px;
+  padding: 0 11px;
+  border-radius: 7px;
+  color: var(--accent);
+  font-size: .9rem;
+  font-weight: 650;
+}
+
+.planning-shell .planner-action:hover,
+.outlook-actions button:not(:disabled):hover,
+.checkpoint-actions button:not(:disabled):hover {
+  background: var(--surface-raised);
+}
+
+.planner-header .map-panel-toggle {
+  display: none;
+}
+
+.planning-shell .trip-form {
+  position: static;
+  background: var(--surface);
+  padding: 10px var(--panel-pad) 12px;
+}
+
+.planning-shell [hidden] {
+  display: none !important;
+}
+
+.planning-shell .route-update-status:empty {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  clip-path: inset(50%);
+}
+
+.planning-shell .route-update-status:not(:empty),
+.planning-shell .error-box {
+  margin: 10px var(--panel-pad);
+}
+
+.planning-shell .settings-field {
+  color: var(--text);
+  border-color: var(--control-border);
+  min-width: 0;
+}
+
+.planning-shell .settings-field label {
+  color: var(--secondary-text);
+  font-size: .875rem;
+}
+
+.waypoint-label {
+  display: block;
+  margin-top: 4px;
+  color: var(--secondary-text);
+  font-size: .875rem;
+  font-weight: 600;
+}
+
+.planning-shell .nearby-category {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.planning-shell .settings-field input {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  font-size: 1rem;
+}
+
+.planning-shell .settings-field .field-error {
+  color: var(--critical);
+  font-size: .875rem;
+}
+
+.planning-shell .schedule-occurrence {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+  color: var(--secondary-text);
+}
+
+.planning-shell .segmented-control button {
+  min-height: 44px;
+  font-size: .875rem;
+}
+
+.planning-shell .stop-order-controls button,
+.planning-shell .stop-order-button,
+.planning-shell .place-close,
+.planning-shell .locate-button {
+  width: 44px;
+  height: 44px;
+  flex-basis: 44px;
+}
+
+.planning-shell .map-icon-button {
+  width: 44px;
+  height: 44px;
+  color: var(--text);
+  background: var(--surface);
+}
+
+.planning-shell .map-icon-button.active {
+  color: var(--accent);
+  background: var(--surface-raised);
+}
+
+.planning-shell .map-toolbar {
+  top: max(12px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
+  bottom: auto;
+}
+
+.map-zoom-controls {
+  position: absolute;
+  z-index: 450;
+  right: 12px;
+  bottom: 32px;
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 1px 5px #17263530;
+}
+
+.map-zoom-controls button {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 0;
+  color: var(--text);
+  background: var(--surface);
+}
+
+.map-zoom-controls button + button {
+  border-top: 1px solid var(--border);
+}
+
+.map-zoom-controls button:hover {
+  background: var(--surface-raised);
+}
+
+.map-zoom-controls .map-weather-toggle[aria-pressed='true'] {
+  color: var(--accent);
+  background: var(--surface-raised);
+}
+
+.planning-shell .location-notice {
+  top: 12px;
+  right: 68px;
+  bottom: auto;
+  max-width: calc(100% - 85px);
+  font-size: .875rem;
+  overflow-wrap: anywhere;
+}
+
+.map-previous-label {
+  position: absolute;
+  z-index: 405;
+  top: 12px;
+  left: 12px;
+  max-width: calc(100% - 80px);
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--text);
+  background: var(--surface);
+  font-size: .875rem;
+  font-weight: 650;
+}
+
+.map-route-legend {
+  position: absolute;
+  z-index: 405;
+  bottom: 38px;
+  left: 8px;
+  display: grid;
+  gap: 5px;
+  max-width: min(260px, calc(100% - 80px));
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  background: var(--surface);
+  font-size: .8125rem;
+  box-shadow: 0 1px 5px #17263530;
+}
+
+.map-route-legend span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.map-route-legend i {
+  width: 20px;
+  height: 5px;
+  flex: none;
+  border-radius: 3px;
+}
+
+.recommended-route-swatch { background: #1765d1; }
+.alternative-route-swatch { background: #657585; }
+
+.planner-results {
+  display: grid;
+  gap: 14px;
+  padding: 12px var(--panel-pad) 22px;
+  overflow-wrap: anywhere;
+  font-size: .9375rem;
+  line-height: 1.4;
+}
+
+.planner-results :is(h2, h3, p, dl, dd) {
+  margin: 0;
+}
+
+.planner-results h2 {
+  font-size: 1.26rem;
+  font-weight: 750;
+  letter-spacing: -.025em;
+}
+
+.planner-results h3 {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.result-hero,
+.outlook-time,
+.compare-option {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.result-hero {
+  background: var(--surface-subtle);
+}
+
+.result-heading,
+.outlook-heading,
+.compare-heading,
+.result-coverage {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+}
+
+.result-links {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 14px;
+}
+
+.result-links a {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  color: var(--accent);
+  font-size: .875rem;
+  font-weight: 650;
+  text-underline-offset: .15em;
+}
+
+.result-heading,
+.outlook-heading {
+  justify-content: space-between;
+}
+
+.result-status {
+  width: fit-content;
+  padding: 4px 8px;
+  border-radius: 6px;
+  color: var(--text);
+  background: var(--surface);
+  font-size: .8125rem;
+  font-weight: 700;
+}
+
+.result-status[data-state='recommended'] {
+  color: var(--positive);
+  background: var(--positive-surface);
+}
+
+.result-status[data-state='blocked'] {
+  color: var(--critical);
+  background: var(--critical-surface);
+}
+
+.selected-route-label,
+.compare-road {
+  color: var(--secondary-text);
+  font-size: .9rem;
+}
+
+.result-metrics,
+.compare-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+:is(.result-metrics, .compare-metrics, .checkpoint-facts) dt {
+  color: var(--secondary-text);
+  font-size: .8125rem;
+}
+
+:is(.result-metrics, .compare-metrics, .checkpoint-facts) dd {
+  margin: 0;
+  font-weight: 650;
+}
+
+.result-coverage {
+  color: var(--secondary-text);
+  font-size: .875rem;
+}
+
+.requested-arrival-time,
+.result-source,
+.outlook-time > p {
+  color: var(--secondary-text);
+  font-size: .875rem;
+}
+
+.result-source {
+  padding-top: 7px;
+  border-top: 1px solid var(--border);
+}
+
+.outlook-time {
+  gap: 4px;
+}
+
+.hour-offset {
+  color: var(--accent);
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.outlook-time .MuiSlider-root {
+  width: calc(100% - 28px);
+  min-height: 44px;
+  margin: 0 14px;
+  color: var(--accent);
+  touch-action: pan-y;
+}
+
+.outlook-time .MuiSlider-rail {
+  background: var(--control-border);
+  opacity: 1;
+}
+
+.outlook-time .MuiSlider-thumb {
+  border: 2px solid var(--surface);
+}
+
+.outlook-time .MuiSlider-thumb.Mui-focusVisible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.outlook-actions,
+.checkpoint-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+}
+
+.outlook-actions button,
+.checkpoint-actions button,
+.compare-select.MuiButtonBase-root {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 4px 10px;
+  border: 1px solid var(--control-border);
+  border-radius: 8px;
+  color: var(--accent);
+  font-size: .875rem;
+  font-weight: 650;
+}
+
+.outlook-actions button:disabled,
+.checkpoint-actions button:disabled,
+.compare-select:disabled {
+  opacity: .62;
+}
+
+.outlook-actions > span {
+  color: var(--secondary-text);
+  font-size: .875rem;
+}
+
+.route-comparison {
+  display: grid;
+  gap: 8px;
+}
+
+.compare-option {
+  gap: 6px;
+}
+
+.compare-option[data-selected='true'] {
+  border-color: var(--accent);
+  background: var(--surface-subtle);
+}
+
+.compare-option[data-hovered='true'] {
+  outline: 2px solid #00a6a0;
+  outline-offset: -2px;
+}
+
+.compare-select {
+  gap: 7px;
+}
+
+.compare-select > i {
+  width: 13px;
+  height: 13px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+}
+
+.compare-select[aria-pressed='true'] > i {
+  background: currentColor;
+  box-shadow: inset 0 0 0 2px var(--surface-subtle);
+}
+
+.compare-note,
+.compare-warning {
+  font-size: .875rem;
+  font-weight: 650;
+}
+
+.compare-note {
+  color: var(--secondary-text);
+}
+
+.planning-shell .result-disclosure {
+  display: block;
+  margin: 0;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.planning-shell .result-disclosure[open] {
+  padding-bottom: 12px;
+}
+
+.result-disclosure > summary {
+  min-height: 44px;
+  padding: 12px 2px;
+  color: var(--text);
+  cursor: pointer;
+  font-size: .95rem;
+  font-weight: 650;
+}
+
+.result-disclosure > summary > span {
+  margin-left: 6px;
+  color: var(--secondary-text);
+  font-size: .8125rem;
+  font-weight: 500;
+}
+
+.weather-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 11px;
+  color: var(--text);
+  font-size: .875rem;
+}
+
+.weather-key span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.weather-key i[data-risk] {
+  width: 14px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--risk-stroke);
+}
+
+.weather-key i[data-risk='No Travel'] {
+  height: 2px;
+  border-radius: 0;
+  background: repeating-linear-gradient(90deg, var(--risk-stroke) 0 5px, transparent 5px 8px);
+}
+
+.weather-key i[data-risk='Unavailable'] {
+  height: 2px;
+  border-radius: 0;
+  background: repeating-linear-gradient(90deg, var(--risk-stroke) 0 2px, transparent 2px 5px);
+}
+
+.settings-info {
+  display: grid;
+  gap: 20px;
+}
+
+.app-shell.settings-shell {
+  height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: var(--surface-subtle);
+}
+
+.app-shell.settings-shell .settings-page {
+  width: min(840px, calc(100% - 48px));
+  margin: clamp(24px, 7vh, 64px) auto 48px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: var(--text);
+  background: transparent;
+  box-shadow: none;
+}
+
+.app-shell[data-theme='dark'].settings-shell {
+  background: #171c21;
+}
+
+.app-shell[data-theme='dark'].settings-shell .settings-page {
+  box-shadow: none;
+}
+
+.app-shell.settings-shell .settings-page > h1,
+.app-shell.settings-shell .settings-section h2,
+.app-shell.settings-shell .settings-info-block h3 {
+  color: var(--text);
+}
+
+.app-shell.settings-shell .settings-section p,
+.app-shell.settings-shell .settings-back {
+  color: var(--secondary-text);
+}
+
+.app-shell.settings-shell .settings-back:hover {
+  color: var(--accent);
+}
+
+.app-shell.settings-shell .settings-section,
+.app-shell.settings-shell .risk-threshold-guide,
+.app-shell.settings-shell .settings-choice-group,
+.app-shell.settings-shell .settings-choice-group button + button {
+  border-color: var(--border);
+}
+
+.app-shell.settings-shell .settings-choice-group button {
+  min-height: 44px;
+  color: var(--secondary-text);
+  background: var(--surface);
+}
+
+.app-shell.settings-shell .settings-choice-group button.active {
+  color: var(--accent);
+  background: var(--surface-raised);
+}
+
+.app-shell.settings-shell .settings-choice-group button:hover:not(.active) {
+  color: var(--text);
+  background: var(--surface-subtle);
+}
+
+.app-shell.settings-shell .settings-time-zone {
+  box-sizing: border-box;
+  width: min(100%, 360px);
+  min-width: 260px;
+  flex: 0 1 360px;
+}
+
+.app-shell.settings-shell .settings-shortcut-list {
+  display: grid;
+  width: min(100%, 520px);
+  flex: 1 1 480px;
+  grid-template-columns: minmax(0, 1fr);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.app-shell.settings-shell .settings-shortcut-list > div {
+  display: grid;
+  min-height: 46px;
+  grid-template-columns: minmax(116px, .55fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.app-shell.settings-shell .settings-shortcut-list dt,
+.app-shell.settings-shell .settings-shortcut-list dd {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+}
+
+.app-shell.settings-shell .settings-shortcut-list dd {
+  color: var(--text);
+  font-size: .9375rem;
+  line-height: 1.4;
+}
+
+.app-shell.settings-shell .settings-shortcut-list dt > span {
+  color: var(--secondary-text);
+  font-size: .8125rem;
+}
+
+.app-shell.settings-shell .settings-shortcut-list kbd {
+  display: inline-grid;
+  min-width: 30px;
+  min-height: 28px;
+  place-items: center;
+  padding: 3px 7px;
+  border: 1px solid var(--control-border);
+  border-radius: 4px;
+  color: var(--text);
+  background: var(--surface-subtle);
+  font: 600 .8125rem/1 var(--mono, ui-monospace, monospace);
+}
+
+.app-shell.settings-shell .settings-time-zone .MuiOutlinedInput-root {
+  min-height: 50px;
+  border-radius: 6px;
+  color: var(--text);
+  background: var(--surface);
+  font: 500 .9375rem/1.4 var(--sans);
+}
+
+.app-shell.settings-shell .settings-time-zone .MuiOutlinedInput-notchedOutline {
+  border-color: var(--control-border);
+}
+
+.app-shell.settings-shell .settings-time-zone .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+  border-color: var(--text);
+}
+
+.app-shell.settings-shell .settings-time-zone .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: var(--focus);
+  border-width: 2px;
+}
+
+.app-shell.settings-shell .settings-time-zone .MuiInputLabel-root {
+  color: var(--secondary-text);
+}
+
+.app-shell.settings-shell .settings-time-zone .MuiInputLabel-root.Mui-focused {
+  color: var(--focus);
+}
+
+.app-shell.settings-shell .settings-time-zone .MuiAutocomplete-popupIndicator {
+  color: var(--secondary-text);
+}
+
+.app-shell.settings-shell .settings-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+  padding: 20px 0;
+}
+
+.app-shell.settings-shell .settings-actions span {
+  color: var(--secondary-text);
+  font-size: .875rem;
+}
+
+.app-shell.settings-shell .settings-actions button {
+  min-height: 44px;
+  min-width: 100px;
+}
+
+.app-shell.settings-shell .weather-key i[data-risk] {
+  width: 18px;
+  height: 7px;
+  flex: none;
+}
+
+.app-shell.settings-shell .weather-key i[data-risk='No Travel'],
+.app-shell.settings-shell .weather-key i[data-risk='Unavailable'] {
+  height: 4px;
+}
+
+.app-shell[data-theme='dark'].settings-shell .weather-key i[data-risk] {
+  filter: brightness(1.4);
+}
+
+.settings-info-block h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+.app-shell.settings-shell .settings-info-block {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+}
+
+.app-shell.settings-shell .settings-info-block.api-credits {
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.app-shell.settings-shell .api-credits a {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.settings-info .weather-key {
+  gap: 10px 18px;
+  margin-top: 12px;
+}
+
+.temperature-gradient {
+  height: 12px;
+  margin-top: 4px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.temperature-legend {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px 16px;
+  margin: 4px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.temperature-legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-size: .8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.temperature-swatch {
+  flex: 0 0 18px;
+  height: 14px;
+  border: 1px solid var(--secondary-text);
+  border-radius: 3px;
+}
+
+.temperature-map-scale {
+  position: absolute;
+  z-index: 435;
+  bottom: 12px;
+  left: 50%;
+  display: grid;
+  width: min(460px, calc(100% - 116px));
+  gap: 5px;
+  padding: 8px 10px 7px;
+  transform: translateX(-50%);
+  border-top: 1px solid var(--border);
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface) 91%, transparent);
+  backdrop-filter: blur(5px);
+  pointer-events: none;
+}
+
+.temperature-map-scale.has-routes {
+  bottom: 102px;
+}
+
+.temperature-map-scale strong {
+  font-size: .75rem;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.temperature-map-scale-gradient {
+  height: 15px;
+  border: 1px solid var(--border);
+}
+
+.temperature-map-scale-ticks {
+  display: flex;
+  justify-content: space-between;
+  gap: 5px;
+  color: var(--secondary-text);
+  font-size: .6875rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+@media (max-width: 680px) {
+  .temperature-legend {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .temperature-map-scale {
+    bottom: 8px;
+    width: min(420px, calc(100% - 112px));
+  }
+
+  .temperature-map-scale.has-routes {
+    bottom: 96px;
+  }
+}
+
+.api-credits ul {
+  margin: 2px 0 0;
+  padding-left: 20px;
+  color: var(--secondary-text);
+  font-size: .875rem;
+  line-height: 1.7;
+}
+
+@media (max-width: 600px) {
+  .app-shell.settings-shell .settings-page {
+    width: calc(100% - 36px);
+    margin: 24px auto 36px;
+  }
+
+  .app-shell.settings-shell .settings-shortcut-list > div {
+    grid-template-columns: minmax(100px, .45fr) minmax(0, 1fr);
+  }
+
+  .app-shell.settings-shell .settings-time-zone {
+    width: 100%;
+    min-width: 0;
+    flex-basis: 100%;
+  }
+}
+
+.current-weather-status {
+  position: absolute;
+  z-index: 450;
+  right: 12px;
+  bottom: 190px;
+  max-width: min(240px, calc(100% - 24px));
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  background: var(--surface);
+  font-size: .8125rem;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}
+
+.checkpoint-actions {
+  margin-top: 10px;
+}
+
+.planner-results .checkpoint-position {
+  margin: 10px 0 4px;
+  color: var(--secondary-text);
+  font-size: .875rem;
+}
+
+.checkpoint-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px 12px;
+  margin: 8px 0;
+  font-size: .875rem;
+}
+
+.planner-results .checkpoint-facts {
+  margin: 7px 0;
+}
+
+.planning-shell .checkpoint-reason {
+  margin: 5px 0 0;
+  color: var(--secondary-text);
+  font-size: .875rem;
+}
+
+.risk-text[data-risk] {
+  color: var(--risk-ink);
+}
+
+.risk-text[data-risk='Low'] { --risk-ink: var(--risk-low); }
+.risk-text[data-risk='Moderate'] { --risk-ink: var(--risk-moderate); }
+.risk-text[data-risk='High'] { --risk-ink: var(--risk-high); }
+.risk-text[data-risk='Severe'] { --risk-ink: var(--risk-severe); }
+.risk-text[data-risk='No Travel'] { --risk-ink: var(--risk-stop); }
+.risk-text[data-risk='Unavailable'] { --risk-ink: var(--risk-missing); }
+
+.settings-page h1:focus {
+  outline: none;
+}
+
+@media (max-width: 680px) {
+  .planning-shell,
+  .planning-shell.planner-active {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 57dvh) minmax(0, 1fr);
+  }
+
+  .planning-shell:not(.planner-active) {
+    grid-template-rows: minmax(0, min(38dvh, 164px)) minmax(0, 1fr);
+  }
+
+  .planning-shell .planner-card,
+  .planning-shell.planner-active .planner-card {
+    position: relative;
+    inset: auto;
+    width: auto;
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    border-width: 0 0 1px;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .planning-shell .map-pane {
+    position: relative;
+  }
+
+  .planning-shell.map-expanded {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .map-expanded .planner-content,
+  .map-expanded .edit-trip {
+    display: none;
+  }
+
+  .planner-header .map-panel-toggle {
+    display: inline-flex;
+  }
+
+  .planner-header {
+    padding-top: max(4px, env(safe-area-inset-top));
+    padding-bottom: 4px;
+  }
+
+  .planner-results {
+    gap: 10px;
+    padding-top: 8px;
+  }
+
+  .result-hero,
+  .outlook-time,
+  .compare-option {
+    padding: 9px 10px;
+  }
+
+  .result-source {
+    font-size: .8125rem;
+  }
+
+  .planning-shell .map-toolbar {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+}
+
+@media (max-width: 420px) {
+  .planning-shell .planner-action {
+    padding-inline: 7px;
+  }
+
+  .result-heading {
+    column-gap: 6px;
+  }
+
+  .result-status {
+    font-size: .77rem;
+  }
+
+  .compare-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) and (max-height: 400px) {
+  .planning-shell .map-toolbar {
+    flex-direction: row;
+  }
+}
+
+.google-map-canvas {
+  position: absolute;
+  inset: 0;
+  background: var(--surface-subtle);
+}
+
+.google-weather-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+.google-map-pin {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 2px solid white;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px #17263580;
+  color: white;
+  font: 700 14px system-ui, sans-serif;
+}
+
+.google-map-pin-anchor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 34px;
+  height: 34px;
+}
+
+.map-driver-pin-card {
+  display: grid;
+  gap: 7px;
+  width: min(248px, calc(100vw - 32px));
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
+  box-shadow: 0 2px 8px #17263535;
+  font-size: .8125rem;
+  line-height: 1.25;
+}
+
+.map-driver-pin-heading {
+  display: grid;
+  grid-template-columns: 22px auto minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+}
+
+.map-driver-pin-heading svg {
+  color: var(--accent);
+}
+
+.map-driver-pin-heading strong {
+  font-weight: 700;
+}
+
+.map-driver-pin-heading span,
+.map-driver-pin-card dd {
+  overflow-wrap: anywhere;
+  font-weight: 600;
+  text-align: right;
+}
+
+.map-driver-pin-card dl {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}
+
+.map-driver-pin-card dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.map-driver-pin-card dt {
+  color: var(--secondary-text);
+}
+
+.map-driver-pin-card dd {
+  margin: 0;
+}
+
+.google-map-status {
+  position: absolute;
+  z-index: 2;
+  top: 45%;
+  left: 50%;
+  width: min(80%, 420px);
+  padding: 14px;
+  transform: translate(-50%, -50%);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  background: var(--surface);
+}
+
+.google-popup {
+  color: #172635;
+}
+
+.google-popup .risk-text[data-risk] {
+  color: #172635;
+}
+
+.google-popup .checkpoint-reason,
+.google-popup dt {
+  color: #455666;
+}
+
+.google-credit {
+  color: var(--secondary-text);
+  font-size: .8125rem;
+}
+
+.google-credit a,
+.place-photos figcaption a {
+  margin-inline-start: 6px;
+}
+
+.gps-panel {
+  display: grid;
+  gap: 6px;
+  margin: 12px var(--panel-pad);
+  padding: 12px;
+  border: 1px solid var(--control-border);
+  border-radius: 12px;
+  color: var(--text);
+  background: var(--surface-raised);
+  font-size: .9375rem;
+}
+
+.gps-panel :is(h3, p, dl) {
+  margin: 0;
+}
+
+.gps-panel .gps-risk {
+  display: block;
+}
+
+.gps-panel .gps-note {
+  color: var(--secondary-text);
+  font-size: .8125rem;
+}
+
+.gps-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.gps-actions :is(button, a) {
+  min-height: 44px;
+  padding: 5px 8px;
+  border: 1px solid var(--control-border);
+  border-radius: 7px;
+  color: var(--accent);
+  font-weight: 650;
+}
+
+.gps-actions a {
+  display: inline-flex;
+  align-items: center;
+}
+
+.planner-header .gps-toggle[aria-pressed='true'] {
+  color: var(--positive);
+  background: var(--positive-surface);
+}
+
+@media (max-width: 420px) {
+  .planner-header > div { gap: 1px; }
+  .planning-shell .planner-action { padding-inline: 5px; font-size: .8125rem; }
+}
+
+/* A plain field guide: clear thresholds, restrained color, and no sideways scrolling. */
+.app-shell.settings-shell .settings-info .risk-threshold-guide {
+  display: grid;
+  gap: 14px;
+  padding: 14px 0 18px;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-info .risk-threshold-title {
+  margin: 0;
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.risk-threshold-intro {
+  display: grid;
+  gap: 4px;
+  max-width: 64ch;
+}
+
+.risk-threshold-intro h3,
+.risk-load-rules h4 {
+  margin: 0;
+  color: var(--text);
+  font-size: .9375rem;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.risk-threshold-intro p,
+.risk-threshold-note {
+  margin: 0;
+  color: var(--secondary-text);
+  font-size: .875rem;
+  line-height: 1.55;
+}
+
+.risk-table-wrap {
+  width: 100%;
+  min-width: 0;
+  overflow: visible;
+}
+
+.settings-info .risk-threshold-table {
+  width: 100%;
+  min-width: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+}
+
+.settings-info .risk-threshold-table thead th {
+  padding: 10px 9px;
+  border-bottom: 1px solid var(--border);
+  color: var(--secondary-text);
+  font-size: .75rem;
+  font-weight: 650;
+  letter-spacing: .035em;
+  line-height: 1.35;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.settings-info .risk-threshold-table thead th:first-child {
+  width: 126px;
+  text-align: left;
+}
+
+.risk-threshold-table thead th small {
+  display: block;
+  color: var(--secondary-text);
+  font-size: .75rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.settings-info .risk-threshold-table tbody th,
+.settings-info .risk-threshold-table tbody td {
+  min-width: 0;
+  height: 48px;
+  padding: 10px 9px;
+  border-bottom: 1px solid var(--border);
+  font-size: .875rem;
+  line-height: 1.3;
+}
+
+.settings-info .risk-threshold-table tbody th {
+  border-left: 3px solid var(--risk-ink);
+  font-weight: 650;
+  text-align: left;
+}
+
+.risk-threshold-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  white-space: nowrap;
+}
+
+.risk-threshold-name i {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--risk-ink);
+}
+
+.app-shell.settings-shell .settings-info .risk-threshold-table tbody th,
+.app-shell.settings-shell .settings-info .risk-threshold-table tbody td {
+  background: transparent;
+}
+
+.app-shell.settings-shell .settings-info .risk-threshold-table tbody td {
+  border-left: 0;
+}
+
+.settings-info .risk-threshold-table tbody td {
+  color: var(--text);
+  font-family: var(--sans);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.app-shell.settings-shell .settings-info .risk-threshold-table tbody tr.threshold-no-travel th,
+.app-shell.settings-shell .settings-info .risk-threshold-table tbody tr.threshold-no-travel td {
+  background: var(--critical-surface);
+}
+
+.settings-info .risk-threshold-table tbody tr:last-child th,
+.settings-info .risk-threshold-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.risk-load-rules {
+  display: grid;
+  gap: 5px;
+  padding-top: 13px;
+  border-top: 1px solid var(--border);
+}
+
+.risk-load-rules ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.risk-load-rules li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 8px 16px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: .875rem;
+  line-height: 1.4;
+}
+
+.risk-load-rules li:last-child {
+  border-bottom: 0;
+}
+
+.risk-load-rules li span {
+  color: var(--secondary-text);
+}
+
+.risk-load-rules li strong {
+  color: var(--critical);
+  font-weight: 650;
+  text-align: right;
+}
+
+@media (max-width: 560px) {
+  .settings-info .risk-threshold-table,
+  .settings-info .risk-threshold-table tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .settings-info .risk-threshold-table thead {
+    display: block;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .settings-info .risk-threshold-table tbody tr {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    min-width: 0;
+    padding: 0 0 9px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .settings-info .risk-threshold-table tbody th {
+    grid-column: 1 / -1;
+    height: auto;
+    padding: 12px 4px 8px;
+    border: 0;
+    border-left: 3px solid var(--risk-ink);
+    font-size: .9375rem;
+  }
+
+  .settings-info .risk-threshold-table tbody td {
+    height: auto;
+    padding: 5px 4px 3px;
+    border: 0;
+    font-size: .875rem;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  .settings-info .risk-threshold-table tbody td::before {
+    display: block;
+    min-height: 2.3em;
+    margin-bottom: 4px;
+    color: var(--secondary-text);
+    content: attr(data-label);
+    font-family: var(--sans);
+    font-size: .6875rem;
+    font-weight: 500;
+    line-height: 1.2;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .app-shell.settings-shell .settings-info .risk-threshold-table tbody tr.threshold-no-travel th,
+  .app-shell.settings-shell .settings-info .risk-threshold-table tbody tr.threshold-no-travel td {
+    background: var(--critical-surface);
+  }
+
+  .settings-info .risk-threshold-table tbody tr.threshold-no-travel {
+    border-bottom: 0;
+  }
+
+  .risk-threshold-name {
+    gap: 8px;
+  }
+
+  .risk-load-rules li {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 10px;
+  }
+
+  .risk-load-rules li span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 380px) {
+  .settings-info .risk-threshold-table tbody td {
+    font-size: .8125rem;
+  }
+
+  .settings-info .risk-threshold-table tbody td::before {
+    font-size: .65625rem;
+  }
+
+  .risk-load-rules li {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+
+  .risk-load-rules li strong {
+    text-align: left;
+  }
+}

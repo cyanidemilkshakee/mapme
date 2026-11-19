@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: truck-routing-config
+data:
+  DJANGO_ENVIRONMENT: "local"
+  KONG_TRUSTED_IPS: ""
+  DJANGO_DEBUG: "false"
+  DJANGO_ALLOWED_HOSTS: "backend"
+  DJANGO_DATABASE_PATH: "/data/db.sqlite3"
+  REDIS_URL: "redis://redis:6379/1"
+  API_TRUSTED_PROXY_COUNT: "1"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: truck-routing-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi

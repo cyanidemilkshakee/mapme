@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway-redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gateway-redis
+  template:
+    metadata:
+      labels:
+        app: gateway-redis
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: redis
+          image: redis:8-alpine
+          args: ["--save", "", "--maxmemory", "64mb", "--maxmemory-policy", "noeviction"]
+          ports:
+            - name: redis
+              containerPort: 6379
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 25m
+              memory: 40Mi
+            limits:
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway-redis
+spec:
+  selector:
+    app: gateway-redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: redis
